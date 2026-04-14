@@ -45,6 +45,10 @@ class YouTubeConverter(DocumentConverter):
     ) -> bool:
         """
         Make sure we're dealing with HTML content *from* YouTube.
+        Supports:
+        - https://www.youtube.com/watch?v=...
+        - https://youtu.be/...
+        - https://www.youtube.com/shorts/...
         """
         url = stream_info.url or ""
         mimetype = (stream_info.mimetype or "").lower()
@@ -53,9 +57,17 @@ class YouTubeConverter(DocumentConverter):
         url = unquote(url)
         url = url.replace(r"\?", "?").replace(r"\=", "=")
 
-        if not url.startswith("https://www.youtube.com/watch?"):
-            # Not a YouTube URL
-            return False
+        # Check for standard YouTube watch URLs
+        if url.startswith("https://www.youtube.com/watch?"):
+            return True
+
+        # Check for youtu.be short URLs
+        if url.startswith("https://youtu.be/"):
+            return True
+
+        # Check for YouTube Shorts URLs
+        if url.startswith("https://www.youtube.com/shorts/"):
+            return True
 
         if extension in ACCEPTED_FILE_EXTENSIONS:
             return True
@@ -148,9 +160,22 @@ class YouTubeConverter(DocumentConverter):
             ytt_api = YouTubeTranscriptApi()
             transcript_text = ""
             parsed_url = urlparse(stream_info.url)  # type: ignore
-            params = parse_qs(parsed_url.query)  # type: ignore
-            if "v" in params and params["v"][0]:
+
+            # Extract video_id from different URL formats
+            video_id = None
+
+            # Standard: https://www.youtube.com/watch?v=VIDEO_ID
+            params = parse_qs(parsed_url.query)
+            if "v" in params and params["v"]:
                 video_id = str(params["v"][0])
+            # Short: https://youtu.be/VIDEO_ID
+            elif parsed_url.netloc == "youtu.be":
+                video_id = parsed_url.path.lstrip("/")
+            # Shorts: https://www.youtube.com/shorts/VIDEO_ID
+            elif "/shorts/" in parsed_url.path:
+                video_id = parsed_url.path.split("/shorts/")[-1]
+
+            if video_id:
                 transcript_list = ytt_api.list(video_id)
                 languages = ["en"]
                 for transcript in transcript_list:
