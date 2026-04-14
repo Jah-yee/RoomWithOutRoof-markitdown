@@ -23,8 +23,8 @@ def test_invalid_flag() -> None:
     assert result.returncode != 0, f"CLI exited with error: {result.stderr}"
     assert (
         "unrecognized arguments" in result.stderr
-    ), "Expected 'unrecognized arguments' to appear in STDERR"
-    assert "SYNTAX" in result.stderr, "Expected 'SYNTAX' to appear in STDERR"
+    ), "Expected 'unrecognized arguments' to appear in stderr"
+    assert "SYNTAX" in result.stderr, "Expected 'SYNTAX' to appear in stderr"
 
 
 if __name__ == "__main__":
